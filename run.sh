@@ -3,55 +3,60 @@
 set -e
 
 APP_NAME="image-to-pdf"
-IMAGE_NAME="image-to-pdf:latest"
+REGISTRY="dregistrygui.uskoinc.com"
+IMAGE_NAME="$REGISTRY/$APP_NAME:latest"
 SERVICE_NAME="image_to_pdf_service"
 
-echo "🚀 Starting deployment for $APP_NAME ..."
+# =========================
+# ENV VARIABLES
+# =========================
+APP_VERSION="1.0.0"
+APP_PORT="5613"
+
+echo "🚀 Deploying $APP_NAME (version $APP_VERSION)..."
 
 # ----------------------------
-# 1. Remove old Swarm service (if exists)
+# 1. Remove old service
 # ----------------------------
-echo "🧹 Removing old Docker Swarm service (if exists)..."
+echo "🧹 Removing old Swarm service..."
 if docker service ls | grep -q "$SERVICE_NAME"; then
     docker service rm "$SERVICE_NAME"
-    echo "✔ Service removed"
-else
-    echo "ℹ No existing service found"
 fi
 
 # ----------------------------
-# 2. Remove old container (local fallback)
+# 2. Clean old containers/images
 # ----------------------------
-echo "🧹 Removing old containers..."
 docker ps -a | grep "$APP_NAME" | awk '{print $1}' | xargs -r docker rm -f || true
+docker images | grep "$APP_NAME" | awk '{print $3}' | xargs -r docker rmi -f || true
 
 # ----------------------------
-# 3. Remove old image
+# 3. Build image
 # ----------------------------
-echo "🧹 Removing old image..."
-if docker images | grep -q "$APP_NAME"; then
-    docker rmi -f "$IMAGE_NAME" || true
-    echo "✔ Old image removed"
-else
-    echo "ℹ No old image found"
-fi
-
-# ----------------------------
-# 4. Build new image
-# ----------------------------
-echo "🔨 Building new Docker image..."
+echo "🔨 Building image..."
 docker build -t $IMAGE_NAME .
 
 # ----------------------------
-# 5. Deploy to Docker Swarm
+# 4. Login + Push
 # ----------------------------
-echo "🚢 Deploying to Docker Swarm..."
+echo "🔐 Login to registry..."
+docker login $REGISTRY
+
+echo "📤 Pushing image..."
+docker push $IMAGE_NAME
+
+# ----------------------------
+# 5. Deploy to Swarm
+# ----------------------------
+echo "🚢 Deploying to Swarm..."
 
 docker service create \
     --name $SERVICE_NAME \
-    --replicas 1 \
-    --publish 5613:5613 \
+    --replicas 4 \
+    --publish $APP_PORT:$APP_PORT \
+    --env APP_VERSION=$APP_VERSION \
+    --env APP_PORT=$APP_PORT \
     $IMAGE_NAME
 
 echo "✅ Deployment complete!"
-echo "🌐 Service running on port 5613"
+echo "🌐 Running on port $APP_PORT with 4 replicas"
+echo "📦 Version: $APP_VERSION"
