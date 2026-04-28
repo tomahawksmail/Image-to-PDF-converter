@@ -32,7 +32,7 @@ docker images | grep "$APP_NAME" | awk '{print $3}' | xargs -r docker rmi -f || 
 # ----------------------------
 # 3. Build image
 # ----------------------------
-eecho "🔨 Building image..."
+echo "🔨 Building image..."
 docker build -t $IMAGE_NAME .
 
 echo "🔐 Logging into registry..."
