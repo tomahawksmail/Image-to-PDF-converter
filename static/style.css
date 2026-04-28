@@ -1,20 +1,41 @@
 body {
     font-family: Arial, sans-serif;
-    background: #f4f6f8;
+    background: linear-gradient(135deg, #eef2f7, #f8fbff);
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    height: 150vh;
+    justify-content: center;
+    height: 100vh;
 }
 
-.container {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
+/* NEW hero section */
+.hero {
     text-align: center;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 40px;
 }
 
+.hero h1 {
+    font-size: 32px;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.hero p {
+    font-size: 16px;
+    color: #7f8c8d;
+}
+
+/* BIGGER container */
+.container {
+    width: 500px;              /* increased from ~300-400 */
+    padding: 50px;             /* more breathing room */
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+/* Make upload box bigger too */
 .upload-box {
     display: block;
     padding: 40px;
@@ -23,7 +44,11 @@ body {
     cursor: pointer;
     margin-bottom: 20px;
 }
-
+.upload-box.dragover {
+    background: #ecf5ff;
+    border-color: #2980b9;
+    transform: scale(1.02);
+}
 .upload-box input {
     display: none;
 }

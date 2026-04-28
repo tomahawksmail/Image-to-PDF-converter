@@ -3,14 +3,18 @@
 <head>
     <title>Image → PDF</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
 
+<div class="hero">
+    <h1>USKO PDF Converter</h1>
+
+    <p>Upload your images and download a clean PDF instantly</p>
+</div>
 
 <div class="container">
-
     <h1>📄 Image to PDF</h1>
-
     <label class="upload-box">
         <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.gif">
         <span>Click or drop images here</span>
@@ -28,6 +32,7 @@
 
 <script>
 const input = document.getElementById("fileInput");
+const uploadBox = document.querySelector(".upload-box");
 const circle = document.querySelector(".progress-ring__circle");
 const text = document.getElementById("progressText");
 const wrapper = document.getElementById("progressWrapper");
@@ -44,11 +49,12 @@ function setProgress(percent) {
     text.innerText = percent + "%";
 }
 
-input.addEventListener("change", function () {
-    if (!input.files.length) return;
+// 🔹 Handle upload (reusable)
+function uploadFiles(files) {
+    if (!files.length) return;
 
     const formData = new FormData();
-    for (let file of input.files) {
+    for (let file of files) {
         formData.append("images", file);
     }
 
@@ -85,6 +91,30 @@ input.addEventListener("change", function () {
     };
 
     xhr.send(formData);
+}
+
+// 🔹 Click upload (existing behavior)
+input.addEventListener("change", function () {
+    uploadFiles(input.files);
+});
+
+// 🔹 DRAG & DROP SUPPORT
+
+uploadBox.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadBox.classList.add("dragover");
+});
+
+uploadBox.addEventListener("dragleave", () => {
+    uploadBox.classList.remove("dragover");
+});
+
+uploadBox.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadBox.classList.remove("dragover");
+
+    const files = e.dataTransfer.files;
+    uploadFiles(files);
 });
 </script>
 
