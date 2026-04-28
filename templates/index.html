@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image → PDF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+
+<div class="container">
+
+    <h1>📄 Image to PDF</h1>
+
+    <label class="upload-box">
+        <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.gif">
+        <span>Click or drop images here</span>
+    </label>
+
+    <!-- Progress circle -->
+    <div class="progress-wrapper" id="progressWrapper">
+        <svg class="progress-ring" width="120" height="120">
+            <circle class="progress-ring__bg" cx="60" cy="60" r="54"/>
+            <circle class="progress-ring__circle" cx="60" cy="60" r="54"/>
+        </svg>
+        <div class="progress-text" id="progressText">0%</div>
+    </div>
+</div>
+
+<script>
+const input = document.getElementById("fileInput");
+const circle = document.querySelector(".progress-ring__circle");
+const text = document.getElementById("progressText");
+const wrapper = document.getElementById("progressWrapper");
+
+const radius = 54;
+const circumference = 2 * Math.PI * radius;
+
+circle.style.strokeDasharray = circumference;
+circle.style.strokeDashoffset = circumference;
+
+function setProgress(percent) {
+    const offset = circumference - percent / 100 * circumference;
+    circle.style.strokeDashoffset = offset;
+    text.innerText = percent + "%";
+}
+
+input.addEventListener("change", function () {
+    if (!input.files.length) return;
+
+    const formData = new FormData();
+    for (let file of input.files) {
+        formData.append("images", file);
+    }
+
+    wrapper.style.display = "flex";
+    setProgress(0);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/upload", true);
+    xhr.responseType = "blob";
+
+    xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            setProgress(percent);
+        }
+    };
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            setProgress(100);
+
+            const blob = new Blob([xhr.response], { type: "application/pdf" });
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "images.pdf";
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+        } else {
+            alert("Upload failed");
+        }
+    };
+
+    xhr.send(formData);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 150vh;
+}
+
+.container {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.upload-box {
+    display: block;
+    padding: 40px;
+    border: 2px dashed #3498db;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.upload-box input {
+    display: none;
+}
+
+.progress-wrapper {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+}
+
+.progress-ring__bg {
+    fill: none;
+    stroke: #eee;
+    stroke-width: 8;
+}
+
+.progress-ring__circle {
+    fill: none;
+    stroke: #3498db;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.3s;
+}
+
+.progress-text {
+    margin-top: 10px;
+    font-size: 18px;
+}
