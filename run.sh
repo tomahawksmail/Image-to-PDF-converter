@@ -50,8 +50,8 @@ echo "🚢 Deploying to Docker Swarm..."
 docker service create \
     --name $SERVICE_NAME \
     --replicas 1 \
-    --publish 5000:5000 \
+    --publish 5613:5613 \
     $IMAGE_NAME
 
 echo "✅ Deployment complete!"
-echo "🌐 Service running on port 5000"
+echo "🌐 Service running on port 5613"
