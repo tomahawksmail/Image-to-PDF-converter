@@ -32,31 +32,24 @@ docker images | grep "$APP_NAME" | awk '{print $3}' | xargs -r docker rmi -f || 
 # ----------------------------
 # 3. Build image
 # ----------------------------
-echo "🔨 Building image..."
+eecho "🔨 Building image..."
 docker build -t $IMAGE_NAME .
 
-# ----------------------------
-# 4. Login + Push
-# ----------------------------
-echo "🔐 Login to registry..."
+echo "🔐 Logging into registry..."
 docker login $REGISTRY
 
 echo "📤 Pushing image..."
 docker push $IMAGE_NAME
 
-# ----------------------------
-# 5. Deploy to Swarm
-# ----------------------------
-echo "🚢 Deploying to Swarm..."
+echo "⏳ Ensuring image is available in registry..."
+sleep 3
 
+echo "🚢 Deploying service..."
 docker service create \
     --name $SERVICE_NAME \
     --replicas 4 \
     --publish $APP_PORT:$APP_PORT \
     --env APP_VERSION=$APP_VERSION \
     --env APP_PORT=$APP_PORT \
+    --with-registry-auth \
     $IMAGE_NAME
-
-echo "✅ Deployment complete!"
-echo "🌐 Running on port $APP_PORT with 4 replicas"
-echo "📦 Version: $APP_VERSION"
