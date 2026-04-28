@@ -29,93 +29,101 @@
         <div class="progress-text" id="progressText">0%</div>
     </div>
 </div>
+<div class="hero">
+    <p>coded by USKO IT Team, 2026</p>
+</div>
+
+<div class="formats">
+    <img src="{{ url_for('static', filename='MIT.svg') }}" alt="SVG">
+    <img src="{{ url_for('static', filename='USKO.jpg') }}" alt="JPG">
+</div>
 
 <script>
-const input = document.getElementById("fileInput");
-const uploadBox = document.querySelector(".upload-box");
-const circle = document.querySelector(".progress-ring__circle");
-const text = document.getElementById("progressText");
-const wrapper = document.getElementById("progressWrapper");
+    const input = document.getElementById("fileInput");
+    const uploadBox = document.querySelector(".upload-box");
+    const circle = document.querySelector(".progress-ring__circle");
+    const text = document.getElementById("progressText");
+    const wrapper = document.getElementById("progressWrapper");
 
-const radius = 54;
-const circumference = 2 * Math.PI * radius;
+    const radius = 54;
+    const circumference = 2 * Math.PI * radius;
 
-circle.style.strokeDasharray = circumference;
-circle.style.strokeDashoffset = circumference;
+    circle.style.strokeDasharray = circumference;
+    circle.style.strokeDashoffset = circumference;
 
-function setProgress(percent) {
-    const offset = circumference - percent / 100 * circumference;
-    circle.style.strokeDashoffset = offset;
-    text.innerText = percent + "%";
-}
-
-// 🔹 Handle upload (reusable)
-function uploadFiles(files) {
-    if (!files.length) return;
-
-    const formData = new FormData();
-    for (let file of files) {
-        formData.append("images", file);
+    function setProgress(percent) {
+        const offset = circumference - percent / 100 * circumference;
+        circle.style.strokeDashoffset = offset;
+        text.innerText = percent + "%";
     }
 
-    wrapper.style.display = "flex";
-    setProgress(0);
+    // 🔹 Handle upload (reusable)
+    function uploadFiles(files) {
+        if (!files.length) return;
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/upload", true);
-    xhr.responseType = "blob";
-
-    xhr.upload.onprogress = function (e) {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            setProgress(percent);
+        const formData = new FormData();
+        for (let file of files) {
+            formData.append("images", file);
         }
-    };
 
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            setProgress(100);
+        wrapper.style.display = "flex";
+        setProgress(0);
 
-            const blob = new Blob([xhr.response], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/upload", true);
+        xhr.responseType = "blob";
 
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "images.pdf";
-            a.click();
+        xhr.upload.onprogress = function (e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                setProgress(percent);
+            }
+        };
 
-            window.URL.revokeObjectURL(url);
-        } else {
-            alert("Upload failed");
-        }
-    };
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                setProgress(100);
 
-    xhr.send(formData);
-}
+                const blob = new Blob([xhr.response], { type: "application/pdf" });
+                const url = window.URL.createObjectURL(blob);
 
-// 🔹 Click upload (existing behavior)
-input.addEventListener("change", function () {
-    uploadFiles(input.files);
-});
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "images.pdf";
+                a.click();
 
-// 🔹 DRAG & DROP SUPPORT
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert("Upload failed");
+            }
+        };
 
-uploadBox.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    uploadBox.classList.add("dragover");
-});
+        xhr.send(formData);
+    }
 
-uploadBox.addEventListener("dragleave", () => {
-    uploadBox.classList.remove("dragover");
-});
+    // 🔹 Click upload (existing behavior)
+    input.addEventListener("change", function () {
+        uploadFiles(input.files);
+    });
 
-uploadBox.addEventListener("drop", (e) => {
-    e.preventDefault();
-    uploadBox.classList.remove("dragover");
+    // 🔹 DRAG & DROP SUPPORT
 
-    const files = e.dataTransfer.files;
-    uploadFiles(files);
-});
+    uploadBox.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadBox.classList.add("dragover");
+    });
+
+    uploadBox.addEventListener("dragleave", () => {
+        uploadBox.classList.remove("dragover");
+    });
+
+    uploadBox.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadBox.classList.remove("dragover");
+
+        const files = e.dataTransfer.files;
+        uploadFiles(files);
+    });
 </script>
 
 </body>
