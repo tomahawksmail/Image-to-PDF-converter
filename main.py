@@ -26,10 +26,7 @@ def upload():
         if file and allowed_file(file.filename):
             try:
                 img = Image.open(file.stream)
-
-                if img.mode in ("RGBA", "P"):
-                    img = img.convert("RGB")
-
+                img = img.convert("RGB")
                 images.append(img)
             except:
                 continue
