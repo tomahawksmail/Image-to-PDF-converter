@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 5613
 
 # Run with production server
-CMD ["gunicorn", "-b", "0.0.0.0:5613", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:5613", "main:app"]
