@@ -10,7 +10,7 @@ SERVICE_NAME="image_to_pdf_service"
 # =========================
 # ENV VARIABLES
 # =========================
-APP_VERSION="1.0.0"
+APP_VERSION="1.1.0"
 APP_PORT="5613"
 
 echo "🚀 Deploying $APP_NAME (version $APP_VERSION)..."

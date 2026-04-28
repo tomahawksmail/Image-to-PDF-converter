@@ -8,27 +8,55 @@
 <body>
 
 <div class="hero">
-    <h1>USKO PDF Converter v.1.0</h1>
-
-    <p>Upload your images and download a clean PDF instantly</p>
+    <h1>USKO PDF Converter v1.0</h1>
+    <p>Upload images and convert instantly</p>
 </div>
 
 <div class="container">
-    <h1>📄 Image to PDF</h1>
-    <label class="upload-box">
-        <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.gif">
-        <span>Click or drop images here</span>
-    </label>
+    <form id="uploadForm">
 
-    <!-- Progress circle -->
+        <label class="upload-box" id="dropZone">
+            <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.gif">
+            <span>Click or drop images here</span>
+        </label>
+
+        <div class="options">
+
+            <div class="option">
+                <span>Fix rotation (EXIF)</span>
+                <label class="switch">
+                    <input type="checkbox" name="exif" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="option">
+                <span>Fit to A4</span>
+                <label class="switch">
+                    <input type="checkbox" name="fit_a4" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="option">
+                <span>Compress PDF</span>
+                <label class="switch">
+                    <input type="checkbox" name="compress" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+        </div>
+
+        <button type="submit">Convert to PDF</button>
+
+    </form>
+
     <div class="progress-wrapper" id="progressWrapper">
-        <svg class="progress-ring" width="120" height="120">
-            <circle class="progress-ring__bg" cx="60" cy="60" r="54"/>
-            <circle class="progress-ring__circle" cx="60" cy="60" r="54"/>
-        </svg>
-        <div class="progress-text" id="progressText">0%</div>
+        <div id="progressText">0%</div>
     </div>
 </div>
+
 <div class="hero">
     <p>coded by USKO IT Team, 2026</p>
 </div>
@@ -40,89 +68,74 @@
 
 <script>
     const input = document.getElementById("fileInput");
-    const uploadBox = document.querySelector(".upload-box");
-    const circle = document.querySelector(".progress-ring__circle");
-    const text = document.getElementById("progressText");
+    const dropZone = document.getElementById("dropZone");
+    const form = document.getElementById("uploadForm");
     const wrapper = document.getElementById("progressWrapper");
+    const text = document.getElementById("progressText");
 
-    const radius = 54;
-    const circumference = 2 * Math.PI * radius;
-
-    circle.style.strokeDasharray = circumference;
-    circle.style.strokeDashoffset = circumference;
-
-    function setProgress(percent) {
-        const offset = circumference - percent / 100 * circumference;
-        circle.style.strokeDashoffset = offset;
-        text.innerText = percent + "%";
-    }
-
-    // 🔹 Handle upload (reusable)
-    function uploadFiles(files) {
+    function upload(files) {
         if (!files.length) return;
 
         const formData = new FormData();
+
         for (let file of files) {
             formData.append("images", file);
         }
 
+        form.querySelectorAll("input[type=checkbox]").forEach(cb => {
+            formData.append(cb.name, cb.checked ? "on" : "off");
+        });
+
         wrapper.style.display = "flex";
-        setProgress(0);
 
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/upload", true);
         xhr.responseType = "blob";
 
-        xhr.upload.onprogress = function (e) {
+        xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                setProgress(percent);
+                let p = Math.round((e.loaded / e.total) * 100);
+                text.innerText = p + "%";
             }
         };
 
         xhr.onload = function () {
             if (xhr.status === 200) {
-                setProgress(100);
+                text.innerText = "100%";
 
                 const blob = new Blob([xhr.response], { type: "application/pdf" });
-                const url = window.URL.createObjectURL(blob);
+                const url = URL.createObjectURL(blob);
 
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = "images.pdf";
                 a.click();
 
-                window.URL.revokeObjectURL(url);
-            } else {
-                alert("Upload failed");
+                URL.revokeObjectURL(url);
             }
         };
 
         xhr.send(formData);
     }
 
-    // 🔹 Click upload (existing behavior)
-    input.addEventListener("change", function () {
-        uploadFiles(input.files);
-    });
-
-    // 🔹 DRAG & DROP SUPPORT
-
-    uploadBox.addEventListener("dragover", (e) => {
+    form.addEventListener("submit", function(e){
         e.preventDefault();
-        uploadBox.classList.add("dragover");
+        upload(input.files);
     });
 
-    uploadBox.addEventListener("dragleave", () => {
-        uploadBox.classList.remove("dragover");
-    });
-
-    uploadBox.addEventListener("drop", (e) => {
+    dropZone.addEventListener("dragover", (e) => {
         e.preventDefault();
-        uploadBox.classList.remove("dragover");
+        dropZone.classList.add("dragover");
+    });
 
-        const files = e.dataTransfer.files;
-        uploadFiles(files);
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        upload(e.dataTransfer.files);
     });
 </script>
 
