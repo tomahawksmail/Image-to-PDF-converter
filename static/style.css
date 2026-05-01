@@ -1,154 +1,163 @@
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    background: linear-gradient(180deg, #f5f7fb, #e9eef7);
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6fa;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* =========================
+   CONTAINER (MAIN CARD)
+========================= */
+.container {
+    width: 650px;
+    height: 40vh;
+
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================
+   CONTENT AREA (TOP PART)
+========================= */
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+}
+.hero {
+    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    margin: 0;
+
+    gap: 1px;
+    padding: 10px 10px;
 }
-
-/* HERO */
-.hero {
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-.hero h1 {
-    font-size: 28px;
-    color: #2c3e50;
-}
-
-.hero p {
-    color: #7f8c8d;
-}
-
-/* MAIN CONTAINER */
-.container {
-    width: 600px;
-    padding: 28px;
-    border-radius: 22px;
-
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-
-    border: 1px solid rgba(255,255,255,0.4);
-
-    box-shadow: 0 20px 50px rgba(0,0,0,0.08);
-
-    text-align: center;
-}
-
-/* UPLOAD BOX */
+/* =========================
+   UPLOAD BOX (≈75% SPACE)
+========================= */
 .upload-box {
-    border: 2px dashed #3498db;
-    padding: 35px;
-    border-radius: 10px;
-    cursor: pointer;
-    margin-top: 15px;
-    transition: 0.2s ease;
-    display: block;
-}
+    flex: 1;
 
-.upload-box.dragover {
-    background: #ecf5ff;
-    transform: scale(1.02);
+    border: 2px dashed #007aff;
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
 }
 
 .upload-box input {
     display: none;
 }
 
-/* OPTIONS */
-.options {
-    margin-top: 20px;
-    text-align: left;
+/* =========================
+   PREVIEW AREA
+========================= */
+.preview-grid {
+    flex: 1;
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    justify-content: center;
+    overflow: auto;
 }
 
-.option {
+/* =========================
+   PREVIEW CARD
+========================= */
+.preview-card {
+    position: relative;
+    width: 120px;
+    height: 140px;
+
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.preview-card img,
+.preview-card canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+/* =========================
+   ACTION BUTTONS
+========================= */
+.delete-btn,
+.rotate-btn {
+    position: absolute;
+    top: 4px;
+    z-index: 10;
+
+    border: none;
+    padding: 4px 6px;
+    font-size: 12px;
+
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.delete-btn {
+    right: 4px;
+    background: red;
+    color: white;
+}
+
+.rotate-btn {
+    left: 4px;
+    background: #007aff;
+    color: white;
+}
+
+/* =========================
+   OPTIONS (BOTTOM AREA)
+========================= */
+.options {
+    margin-top: auto;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    padding: 14px 14px;
-    margin: 10px 0;
-
-    border-radius: 14px;
-
-    background: rgba(255,255,255,0.55);
-    border: 1px solid rgba(0,0,0,0.04);
-
-    backdrop-filter: blur(8px);
+    padding: 10px;
+    background: #f7f7f7;
+    border-radius: 10px;
 }
 
-.option input {
-    transform: scale(1.2);
-    accent-color: #007aff;
+/* label text left, switch right alignment ensured */
+.option-label {
+    flex: 1;
+}
+.options {
+    backdrop-filter: blur(10px);
 }
 
-/* BUTTON */
-button {
-    margin-top: 18px;
-    width: 100%;
-    padding: 14px;
-
-    background: #007aff;
-    color: white;
-
-    border: none;
-    border-radius: 14px;
-
-    font-size: 16px;
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition: all 0.2s ease;
+.option-label {
+    font-weight: 500;
 }
-
-button:hover {
-    background: #0066d6;
-    transform: scale(1.01);
-}
-
-button:active {
-    transform: scale(0.98);
-}
-
-/* PROGRESS */
-.progress-wrapper {
-    display: none;
-    margin-top: 20px;
-    flex-direction: column;
-    align-items: center;
-    font-size: 18px;
-    color: #2c3e50;
-}
-
-.formats {
-    margin-top: 14px;
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    align-items: center;
-}
-
-.formats img {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-
-    opacity: 0.7;
-    transition: all 0.2s ease;
-}
-
-.formats img:hover {
-    opacity: 1;
-    transform: scale(1.15);
-}
-
+/* =========================
+   SWITCH (iOS STYLE)
+========================= */
 .switch {
     position: relative;
     display: inline-block;
@@ -156,14 +165,12 @@ button:active {
     height: 26px;
 }
 
-/* hide default checkbox */
 .switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
 
-/* track */
 .slider {
     position: absolute;
     cursor: pointer;
@@ -174,42 +181,50 @@ button:active {
     border-radius: 34px;
 }
 
-/* circle */
 .slider:before {
     position: absolute;
     content: "";
     height: 20px;
     width: 20px;
+
     left: 3px;
     bottom: 3px;
 
     background-color: white;
-    transition: 0.3s;
     border-radius: 50%;
 
+    transition: 0.3s;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* ON state (iOS green) */
 .switch input:checked + .slider {
     background-color: #34c759;
 }
 
-/* move circle */
 .switch input:checked + .slider:before {
     transform: translateX(20px);
 }
 
-/* row layout */
-.option {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* =========================
+   CONVERT BUTTON (BOTTOM)
+========================= */
+#convertBtn {
+    margin-top: 10px;
 
-    padding: 14px;
-    margin: 10px 0;
+    width: 100%;
+    padding: 12px;
 
-    border-radius: 14px;
-    background: rgba(255,255,255,0.6);
-    border: 1px solid rgba(0,0,0,0.04);
+    border: none;
+    background: #007aff;
+    color: white;
+
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+#convertBtn:hover {
+    background: #005fcc;
 }

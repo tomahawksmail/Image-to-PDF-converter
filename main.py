@@ -1,29 +1,25 @@
 from flask import Flask, request, send_file, render_template
 from PIL import Image, ImageOps
+from PyPDF2 import PdfMerger, PdfReader
 import io
+from datetime import datetime
 
 app = Flask(__name__)
 
-# ----------------------------
-# Image normalization
-# ----------------------------
-def process_image(file):
+A4_WIDTH = 2480
+A4_HEIGHT = 3508
+
+
+def process_image(file, rotate=0):
     img = Image.open(file.stream)
-
-    # EXIF rotation fix
     img = ImageOps.exif_transpose(img)
-
-    # remove alpha/palette issues
     img = img.convert("RGB")
+
+    if rotate:
+        img = img.rotate(-rotate, expand=True)
 
     return img
 
-
-# ----------------------------
-# Fit to A4
-# ----------------------------
-A4_WIDTH = 2480
-A4_HEIGHT = 3508
 
 def fit_to_a4(img):
     page = Image.new("RGB", (A4_WIDTH, A4_HEIGHT), "white")
@@ -37,55 +33,71 @@ def fit_to_a4(img):
     return page
 
 
-# ----------------------------
-# Route
-# ----------------------------
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-@app.route("/upload", methods=["POST"])
-def upload():
-    files = request.files.getlist("images")
+@app.route("/convert", methods=["POST"])
+def convert():
+    files = request.files.getlist("files")
+    rotations = request.form.getlist("rotations")
 
-    compress = request.form.get("compress") == "on"
     fit_a4 = request.form.get("fit_a4") == "on"
-    exif_fix = request.form.get("exif") == "on"
+    compress = request.form.get("compress") == "on"
 
-    images = []
+    merger = PdfMerger()
 
-    for f in files:
-        img = Image.open(f.stream)
+    for i, f in enumerate(files):
+        if not f or not f.filename:
+            continue
 
-        if exif_fix:
-            img = ImageOps.exif_transpose(img)
+        ext = f.filename.lower()
 
-        img = img.convert("RGB")
+        rotate = 0
+        if i < len(rotations):
+            try:
+                rotate = int(rotations[i])
+            except:
+                rotate = 0
 
-        if fit_a4:
-            img = fit_to_a4(img)
+        # ---------------- IMAGE ----------------
+        if ext.endswith((".jpg", ".jpeg", ".png", ".webp")):
+            img = process_image(f, rotate)
 
-        images.append(img)
+            if fit_a4:
+                img = fit_to_a4(img)
+
+            buf = io.BytesIO()
+
+            # 🔥 COMPRESSION LOGIC
+            if compress:
+                img.save(buf, format="JPEG", quality=60, optimize=True)
+            else:
+                img.save(buf, format="JPEG", quality=95)
+
+            buf.seek(0)
+
+            # convert image -> PDF page
+            temp_img = Image.open(buf)
+            pdf_buf = io.BytesIO()
+            temp_img.convert("RGB").save(pdf_buf, format="PDF", quality=95)
+            pdf_buf.seek(0)
+
+            merger.append(pdf_buf)
+
+        # ---------------- PDF ----------------
+        elif ext.endswith(".pdf"):
+            pdf = PdfReader(f.stream)
+            merger.append(pdf)
 
     output = io.BytesIO()
-
-    save_kwargs = {
-        "format": "PDF",
-        "save_all": True,
-        "append_images": images[1:],
-    }
-
-    # compression toggle
-    if compress:
-        save_kwargs["quality"] = 75
-        save_kwargs["optimize"] = True
-
-    images[0].save(output, **save_kwargs)
+    merger.write(output)
+    merger.close()
     output.seek(0)
-
-    return send_file(output, download_name="converted.pdf", as_attachment=True)
+    filename = f"result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    return send_file(output, download_name=filename, as_attachment=True)
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5613)
+    app.run(debug=True, port=5613)

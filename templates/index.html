@@ -1,142 +1,175 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Image → PDF</title>
+    <title>USKO pdf converter</title>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
+
 <body>
 
-<div class="hero">
-    <h1>USKO PDF Converter v1.1.0</h1>
-    <p>Upload images and convert instantly</p>
-</div>
+<div class="page">
 
-<div class="container">
-    <form id="uploadForm">
+    <div class="hero">
+        <h1>USKO PDF Converter ver. 3.0.0</h1>
+    </div>
 
-        <label class="upload-box" id="dropZone">
-            <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.gif">
-            <span>Click or drop images here</span>
-        </label>
+    <div class="center-area">
+        <div class="container">
 
-        <div class="options">
+            <div class="content">
 
-            <div class="option">
-                <span>Fix rotation (EXIF, iPhone photos no longer rotated sideways)</span>
-                <label class="switch">
-                    <input type="checkbox" name="exif" checked>
-                    <span class="slider"></span>
+                <label class="upload-box">
+                    <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.pdf">
+                    <span>Click or drop files here</span>
                 </label>
+
+                <div id="previewList" class="preview-grid"></div>
+
+                <div class="options">
+
+                    <span class="option-label">Fit to A4</span>
+
+                    <label class="switch">
+                        <input type="checkbox" name="fit_a4" checked>
+                        <span class="slider"></span>
+                    </label>
+
+                </div>
+
+                <div class="options">
+
+                    <span class="option-label">Compress PDF</span>
+
+                    <label class="switch">
+                        <input type="checkbox" name="compress">
+                        <span class="slider"></span>
+                    </label>
+
+                </div>
+
             </div>
 
-            <div class="option">
-                <span>Fit to A4</span>
-                <label class="switch">
-                    <input type="checkbox" name="fit_a4" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="option">
-                <span>Compress PDF</span>
-                <label class="switch">
-                    <input type="checkbox" name="compress" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
+            <button id="convertBtn">Convert to PDF</button>
 
         </div>
-
-        <button type="submit">Convert to PDF</button>
-
-    </form>
-
-    <div class="progress-wrapper" id="progressWrapper">
-        <div id="progressText">0%</div>
     </div>
-</div>
 
-<div class="hero">
-    <p>coded by USKO IT Team, 2026</p>
-</div>
+    <div class="hero">
+        <h4>Coded by USKO IT Team, 2026</h4>
+    </div>
 
-<div class="formats">
-    <img src="{{ url_for('static', filename='MIT.svg') }}" alt="SVG">
-    <img src="{{ url_for('static', filename='USKO.jpg') }}" alt="JPG">
 </div>
-
 <script>
     const input = document.getElementById("fileInput");
-    const dropZone = document.getElementById("dropZone");
-    const form = document.getElementById("uploadForm");
-    const wrapper = document.getElementById("progressWrapper");
-    const text = document.getElementById("progressText");
+    const previewList = document.getElementById("previewList");
+    const convertBtn = document.getElementById("convertBtn");
 
-    function upload(files) {
-        if (!files.length) return;
+    let items = [];
 
-        const formData = new FormData();
+    // ---------------- FILE LOAD ----------------
+    input.addEventListener("change", handleFiles);
+
+    async function handleFiles(e) {
+        previewList.innerHTML = "";
+        items = [];
+
+        const files = Array.from(e.target.files || []);
 
         for (let file of files) {
-            formData.append("images", file);
-        }
+            const obj = { file, rotation: 0 };
+            items.push(obj);
 
-        form.querySelectorAll("input[type=checkbox]").forEach(cb => {
+            const card = document.createElement("div");
+            card.className = "preview-card";
+
+            // DELETE
+            const del = document.createElement("button");
+            del.type = "button";
+            del.className = "delete-btn";
+            del.innerText = "✕";
+
+            del.onclick = (ev) => {
+                ev.preventDefault();
+                items = items.filter(i => i !== obj);
+                card.remove();
+            };
+
+            // ROTATE
+            const rot = document.createElement("button");
+            rot.type = "button";
+            rot.className = "rotate-btn";
+            rot.innerText = "⟳";
+
+            let preview;
+
+            rot.onclick = (ev) => {
+                ev.preventDefault();
+                obj.rotation = (obj.rotation + 90) % 360;
+                preview.style.transform = `rotate(${obj.rotation}deg)`;
+            };
+
+            // PREVIEW
+            if (file.type.startsWith("image/")) {
+                preview = document.createElement("img");
+                preview.src = URL.createObjectURL(file);
+            } else {
+                preview = document.createElement("canvas");
+
+                const pdfData = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                const page = await pdf.getPage(1);
+
+                const viewport = page.getViewport({ scale: 0.4 });
+                const ctx = preview.getContext("2d");
+
+                preview.width = viewport.width;
+                preview.height = viewport.height;
+
+                await page.render({ canvasContext: ctx, viewport }).promise;
+            }
+
+            card.appendChild(del);
+            card.appendChild(rot);
+            card.appendChild(preview);
+
+            previewList.appendChild(card);
+        }
+    }
+
+    // ---------------- CONVERT (FIXED) ----------------
+    convertBtn.onclick = async () => {
+        const formData = new FormData();
+
+        // files + rotations
+        items.forEach(item => {
+            formData.append("files", item.file);
+            formData.append("rotations", item.rotation);
+        });
+
+        // FIXED checkbox handling (NO FORM dependency)
+        document.querySelectorAll("input[type=checkbox]").forEach(cb => {
             formData.append(cb.name, cb.checked ? "on" : "off");
         });
 
-        wrapper.style.display = "flex";
+        const res = await fetch("/convert", {
+            method: "POST",
+            body: formData
+        });
 
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/upload", true);
-        xhr.responseType = "blob";
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
 
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                let p = Math.round((e.loaded / e.total) * 100);
-                text.innerText = p + "%";
-            }
-        };
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "output.pdf";
+        a.click();
 
-        xhr.onload = function () {
-            if (xhr.status === 200) {
-                text.innerText = "100%";
-
-                const blob = new Blob([xhr.response], { type: "application/pdf" });
-                const url = URL.createObjectURL(blob);
-
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "images.pdf";
-                a.click();
-
-                URL.revokeObjectURL(url);
-            }
-        };
-
-        xhr.send(formData);
-    }
-
-    form.addEventListener("submit", function(e){
-        e.preventDefault();
-        upload(input.files);
-    });
-
-    dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.classList.add("dragover");
-    });
-
-    dropZone.addEventListener("dragleave", () => {
-        dropZone.classList.remove("dragover");
-    });
-
-    dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("dragover");
-        upload(e.dataTransfer.files);
-    });
+        URL.revokeObjectURL(url);
+    };
 </script>
 
 </body>
