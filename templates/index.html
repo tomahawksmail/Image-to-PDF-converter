@@ -53,7 +53,7 @@
 
             </div>
 
-            <button id="convertBtn">Convert to PDF</button>
+            <button id="convertBtn" disabled>Convert</button>
 
         </div>
     </div>
@@ -64,20 +64,31 @@
 
 </div>
 <script>
+
     const input = document.getElementById("fileInput");
     const previewList = document.getElementById("previewList");
     const convertBtn = document.getElementById("convertBtn");
 
     let items = [];
 
-    // ---------------- FILE LOAD ----------------
+    // ==========================
+    // UPDATE BUTTON STATE
+    // ==========================
+    function updateButtonState() {
+        const hasFiles = items.length > 0;
+        convertBtn.disabled = !hasFiles;
+    }
+
+    // ==========================
+    // FILE HANDLING
+    // ==========================
     input.addEventListener("change", handleFiles);
 
     async function handleFiles(e) {
-        previewList.innerHTML = "";
-        items = [];
-
         const files = Array.from(e.target.files || []);
+
+        items = [];
+        previewList.innerHTML = "";
 
         for (let file of files) {
             const obj = { file, rotation: 0 };
@@ -86,9 +97,8 @@
             const card = document.createElement("div");
             card.className = "preview-card";
 
-            // DELETE
+            // DELETE BUTTON
             const del = document.createElement("button");
-            del.type = "button";
             del.className = "delete-btn";
             del.innerText = "✕";
 
@@ -96,11 +106,11 @@
                 ev.preventDefault();
                 items = items.filter(i => i !== obj);
                 card.remove();
+                updateButtonState();
             };
 
-            // ROTATE
+            // ROTATE BUTTON
             const rot = document.createElement("button");
-            rot.type = "button";
             rot.className = "rotate-btn";
             rot.innerText = "⟳";
 
@@ -138,19 +148,40 @@
 
             previewList.appendChild(card);
         }
+
+        new Sortable(previewList, {
+            animation: 150,
+            onEnd: () => {
+                // reorder items based on DOM order
+                const newOrder = [];
+                const cards = previewList.children;
+
+                for (let card of cards) {
+                    const index = [...previewList.children].indexOf(card);
+                    newOrder.push(items[index]);
+                }
+
+                items = newOrder;
+            }
+        });
+
+        updateButtonState();
     }
 
-    // ---------------- CONVERT (FIXED) ----------------
+    // ==========================
+    // CONVERT PDF
+    // ==========================
     convertBtn.onclick = async () => {
+        if (items.length === 0) return;
+
         const formData = new FormData();
 
-        // files + rotations
         items.forEach(item => {
             formData.append("files", item.file);
             formData.append("rotations", item.rotation);
         });
 
-        // FIXED checkbox handling (NO FORM dependency)
+        // options
         document.querySelectorAll("input[type=checkbox]").forEach(cb => {
             formData.append(cb.name, cb.checked ? "on" : "off");
         });
@@ -170,6 +201,32 @@
 
         URL.revokeObjectURL(url);
     };
+
+    // ==========================
+    // DRAG & DROP SUPPORT
+    // ==========================
+    const dropZone = document.querySelector(".upload-box");
+
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+
+        input.files = e.dataTransfer.files;
+        handleFiles({ target: input });
+    });
+
+
+    // init state
+    updateButtonState();
 </script>
 
 </body>
