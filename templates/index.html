@@ -14,7 +14,7 @@
 <div class="page">
 
     <div class="hero">
-        <h1>USKO PDF Converter ver. 3.0.0</h1>
+        <h1>USKO PDF CONVERTER</h1>
     </div>
 
     <div class="center-area">
@@ -60,6 +60,13 @@
 
     <div class="hero">
         <h4>Coded by USKO IT Team, 2026</h4>
+        <div id="counter">
+            Processed: 0 | Total: 0
+        </div><br>
+        <div>
+            App started: {{ app_started }}
+            App version: 3.0.5
+        </div>
     </div>
 
 </div>
@@ -172,35 +179,42 @@
     // CONVERT PDF
     // ==========================
     convertBtn.onclick = async () => {
-        if (items.length === 0) return;
+    if (items.length === 0) return;
 
-        const formData = new FormData();
+    const formData = new FormData();
 
-        items.forEach(item => {
-            formData.append("files", item.file);
-            formData.append("rotations", item.rotation);
-        });
+    items.forEach(item => {
+        formData.append("files", item.file);
+        formData.append("rotations", item.rotation);
+    });
 
-        // options
-        document.querySelectorAll("input[type=checkbox]").forEach(cb => {
-            formData.append(cb.name, cb.checked ? "on" : "off");
-        });
+    document.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        formData.append(cb.name, cb.checked ? "on" : "off");
+    });
 
-        const res = await fetch("/convert", {
-            method: "POST",
-            body: formData
-        });
+    const res = await fetch("/convert", {
+        method: "POST",
+        body: formData
+    });
 
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+    // ✅ READ HEADERS HERE
+    const processed = res.headers.get("X-Files-Processed");
+    const total = res.headers.get("X-Total-Files");
+    const startTime = res.headers.get("X-App-Start-Time");
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "output.pdf";
-        a.click();
+    document.getElementById("counter").innerText =
+        `Processed: ${processed} | Total: ${total}`;
 
-        URL.revokeObjectURL(url);
-    };
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "output.pdf";
+    a.click();
+
+    URL.revokeObjectURL(url);
+};
 
     // ==========================
     // DRAG & DROP SUPPORT
@@ -228,6 +242,7 @@
     // init state
     updateButtonState();
 </script>
+
 
 </body>
 </html>

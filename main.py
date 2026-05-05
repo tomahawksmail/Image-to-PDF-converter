@@ -9,6 +9,8 @@ app = Flask(__name__)
 A4_WIDTH = 2480
 A4_HEIGHT = 3508
 
+files_converted_count = 0
+app_start_time = datetime.now()
 
 def process_image(file, rotate=0):
     img = Image.open(file.stream)
@@ -35,11 +37,16 @@ def fit_to_a4(img):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template(
+        "index.html",
+        app_started=app_start_time.strftime("%Y-%m-%d %H:%M:%S")
+    )
 
 
 @app.route("/convert", methods=["POST"])
 def convert():
+    global files_converted_count
+
     files = request.files.getlist("files")
     rotations = request.form.getlist("rotations")
 
@@ -47,6 +54,7 @@ def convert():
     compress = request.form.get("compress") == "on"
 
     merger = PdfMerger()
+    processed_count = 0  # counter per request
 
     for i, f in enumerate(files):
         if not f or not f.filename:
@@ -85,18 +93,35 @@ def convert():
             pdf_buf.seek(0)
 
             merger.append(pdf_buf)
+            processed_count += 1
 
         # ---------------- PDF ----------------
         elif ext.endswith(".pdf"):
             pdf = PdfReader(f.stream)
             merger.append(pdf)
-
+            processed_count += 1  # ✅ ADD THIS
+    # update global counter
+    files_converted_count += processed_count
     output = io.BytesIO()
     merger.write(output)
     merger.close()
     output.seek(0)
     filename = f"result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    return send_file(output, download_name=filename, as_attachment=True)
+    # pass count via header (since you're sending a file)
+    response = send_file(output, download_name=filename, as_attachment=True)
+
+    # ✅ ADD HEADERS FIRST
+    response.headers["X-Files-Processed"] = str(processed_count)
+    response.headers["X-Total-Files"] = str(files_converted_count)
+    response.headers["X-App-Start-Time"] = app_start_time.strftime("%Y-%m-%d %H:%M:%S")
+    print(app_start_time)
+
+    # ✅ THEN expose them to browser
+    response.headers["Access-Control-Expose-Headers"] = (
+        "X-Files-Processed, X-Total-Files, X-App-Start-Time"
+    )
+
+    return response
 
 
 if __name__ == "__main__":
