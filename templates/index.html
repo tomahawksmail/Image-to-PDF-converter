@@ -5,6 +5,7 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
@@ -23,7 +24,7 @@
             <div class="content">
 
                 <label class="upload-box">
-                    <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.pdf">
+                    <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.webp,.pdf">
                     <span>Click or drop files here</span>
                 </label>
 
@@ -45,7 +46,35 @@
                     <span class="option-label">Compress PDF</span>
 
                     <label class="switch">
-                        <input type="checkbox" name="compress">
+                        <input type="checkbox" name="compress" id="compressCheckbox">
+                        <span class="slider"></span>
+                    </label>
+
+                </div>
+
+                <div class="options" id="qualityOptions" style="display: none;">
+
+                    <span class="option-label">
+                        Quality: <span id="qualityValue">35</span>%
+                    </span>
+
+                    <input
+                        type="range"
+                        id="qualitySlider"
+                        name="compress_quality"
+                        min="10"
+                        max="95"
+                        value="35"
+                    >
+
+                </div>
+
+                <div class="options">
+
+                    <span class="option-label">One file as result</span>
+
+                    <label class="switch">
+                        <input type="checkbox" name="single_result" id="singleResultCheckbox" checked>
                         <span class="slider"></span>
                     </label>
 
@@ -60,22 +89,37 @@
 
     <div class="hero">
         <h4>Coded by USKO IT Team, 2026</h4>
+
         <div id="counter">
             Processed: 0 | Total: 0
-        </div><br>
+        </div>
+
+        <br>
+
         <div>
             App version: 3.1.0
         </div>
     </div>
 
 </div>
+
 <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
     const input = document.getElementById("fileInput");
     const previewList = document.getElementById("previewList");
     const convertBtn = document.getElementById("convertBtn");
 
+    const compressCheckbox = document.getElementById("compressCheckbox");
+    const qualityOptions = document.getElementById("qualityOptions");
+    const qualitySlider = document.getElementById("qualitySlider");
+    const qualityValue = document.getElementById("qualityValue");
+
+    const singleResultCheckbox = document.getElementById("singleResultCheckbox");
+
     let items = [];
+    let sortableInstance = null;
 
     // ==========================
     // UPDATE BUTTON STATE
@@ -86,22 +130,56 @@
     }
 
     // ==========================
+    // QUALITY SLIDER SHOW / HIDE
+    // ==========================
+    function updateQualityVisibility() {
+        qualityOptions.style.display = compressCheckbox.checked ? "flex" : "none";
+    }
+
+    compressCheckbox.addEventListener("change", updateQualityVisibility);
+
+    qualitySlider.addEventListener("input", () => {
+        qualityValue.innerText = qualitySlider.value;
+    });
+
+    // ==========================
     // FILE HANDLING
     // ==========================
     input.addEventListener("change", handleFiles);
 
+    function createId() {
+        if (window.crypto && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+
+        return Date.now().toString() + Math.random().toString(16).slice(2);
+    }
+
     async function handleFiles(e) {
         const files = Array.from(e.target.files || []);
+
+        items.forEach(item => {
+            if (item.previewUrl) {
+                URL.revokeObjectURL(item.previewUrl);
+            }
+        });
 
         items = [];
         previewList.innerHTML = "";
 
         for (let file of files) {
-            const obj = { file, rotation: 0 };
+            const obj = {
+                id: createId(),
+                file: file,
+                rotation: 0,
+                previewUrl: null
+            };
+
             items.push(obj);
 
             const card = document.createElement("div");
             card.className = "preview-card";
+            card.dataset.id = obj.id;
 
             // DELETE BUTTON
             const del = document.createElement("button");
@@ -110,8 +188,14 @@
 
             del.onclick = (ev) => {
                 ev.preventDefault();
-                items = items.filter(i => i !== obj);
+
+                if (obj.previewUrl) {
+                    URL.revokeObjectURL(obj.previewUrl);
+                }
+
+                items = items.filter(i => i.id !== obj.id);
                 card.remove();
+
                 updateButtonState();
             };
 
@@ -124,6 +208,7 @@
 
             rot.onclick = (ev) => {
                 ev.preventDefault();
+
                 obj.rotation = (obj.rotation + 90) % 360;
                 preview.style.transform = `rotate(${obj.rotation}deg)`;
             };
@@ -131,8 +216,11 @@
             // PREVIEW
             if (file.type.startsWith("image/")) {
                 preview = document.createElement("img");
-                preview.src = URL.createObjectURL(file);
-            } else {
+
+                obj.previewUrl = URL.createObjectURL(file);
+                preview.src = obj.previewUrl;
+
+            } else if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
                 preview = document.createElement("canvas");
 
                 const pdfData = await file.arrayBuffer();
@@ -145,7 +233,13 @@
                 preview.width = viewport.width;
                 preview.height = viewport.height;
 
-                await page.render({ canvasContext: ctx, viewport }).promise;
+                await page.render({
+                    canvasContext: ctx,
+                    viewport: viewport
+                }).promise;
+
+            } else {
+                continue;
             }
 
             card.appendChild(del);
@@ -155,16 +249,23 @@
             previewList.appendChild(card);
         }
 
-        new Sortable(previewList, {
-            animation: 150,
-            onEnd: () => {
-                // reorder items based on DOM order
-                const newOrder = [];
-                const cards = previewList.children;
+        if (sortableInstance) {
+            sortableInstance.destroy();
+        }
 
-                for (let card of cards) {
-                    const index = [...previewList.children].indexOf(card);
-                    newOrder.push(items[index]);
+        sortableInstance = new Sortable(previewList, {
+            animation: 150,
+
+            onEnd: () => {
+                const newOrder = [];
+
+                for (let card of previewList.children) {
+                    const id = card.dataset.id;
+                    const foundItem = items.find(item => item.id === id);
+
+                    if (foundItem) {
+                        newOrder.push(foundItem);
+                    }
                 }
 
                 items = newOrder;
@@ -175,45 +276,91 @@
     }
 
     // ==========================
+    // GET FILENAME FROM RESPONSE
+    // ==========================
+    function getFilenameFromResponse(res, fallbackName) {
+        const disposition = res.headers.get("Content-Disposition");
+
+        if (!disposition) {
+            return fallbackName;
+        }
+
+        const match = disposition.match(/filename="?([^"]+)"?/);
+
+        if (match && match[1]) {
+            return match[1];
+        }
+
+        return fallbackName;
+    }
+
+    // ==========================
     // CONVERT PDF
     // ==========================
     convertBtn.onclick = async () => {
-    if (items.length === 0) return;
+        if (items.length === 0) return;
 
-    const formData = new FormData();
+        const formData = new FormData();
 
-    items.forEach(item => {
-        formData.append("files", item.file);
-        formData.append("rotations", item.rotation);
-    });
+        items.forEach(item => {
+            formData.append("files", item.file);
+            formData.append("rotations", item.rotation);
+        });
 
-    document.querySelectorAll("input[type=checkbox]").forEach(cb => {
-        formData.append(cb.name, cb.checked ? "on" : "off");
-    });
+        document.querySelectorAll("input[type=checkbox]").forEach(cb => {
+            formData.append(cb.name, cb.checked ? "on" : "off");
+        });
 
-    const res = await fetch("/convert", {
-        method: "POST",
-        body: formData
-    });
+        formData.append("compress_quality", qualitySlider.value);
 
-    // ✅ READ HEADERS HERE
-    const processed = res.headers.get("X-Files-Processed");
-    const total = res.headers.get("X-Total-Files");
-    const startTime = res.headers.get("X-App-Start-Time");
+        convertBtn.disabled = true;
+        convertBtn.innerText = "Converting...";
 
-    document.getElementById("counter").innerText =
-        `Processed: ${processed} | Total: ${total}`;
+        try {
+            const res = await fetch("/convert", {
+                method: "POST",
+                body: formData
+            });
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+            if (!res.ok) {
+                const errorText = await res.text();
+                alert(errorText || "Conversion failed.");
+                return;
+            }
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "output.pdf";
-    a.click();
+            const processed = res.headers.get("X-Files-Processed") || "0";
+            const total = res.headers.get("X-Total-Files") || "0";
 
-    URL.revokeObjectURL(url);
-};
+            document.getElementById("counter").innerText =
+                `Processed: ${processed} | Total: ${total}`;
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            const fallbackName = singleResultCheckbox.checked
+                ? "output.pdf"
+                : "converted_files.zip";
+
+            const filename = getFilenameFromResponse(res, fallbackName);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error(error);
+            alert("Conversion error.");
+
+        } finally {
+            convertBtn.innerText = "Convert";
+            updateButtonState();
+        }
+    };
 
     // ==========================
     // DRAG & DROP SUPPORT
@@ -237,11 +384,10 @@
         handleFiles({ target: input });
     });
 
-
     // init state
     updateButtonState();
+    updateQualityVisibility();
 </script>
-
 
 </body>
 </html>
